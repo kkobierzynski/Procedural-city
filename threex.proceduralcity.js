@@ -91,15 +91,27 @@ THREEx.ProceduralCity	= function(){
 
 	}
 
+	const textureLoader = new THREE.TextureLoader();
+	const textura_edificios = textureLoader.load('./l.jpg');
+	// textura_edificios.wrapS = THREE.RepeatWrapping;
+	// textura_edificios.wrapT = THREE.RepeatWrapping;
+	//textura_edificios.anisotropy	= renderer.getMaxAnisotropy();
+	//textura_edificios.needsUpdate =true;
+	// textura_edificios.repeat.set( 1, 2 );
+
 	// generate the texture
 	var textureDay		= new THREE.Texture( generateTextureCanvas(false, "#ffffff") );
 	textureDay.anisotropy	= renderer.getMaxAnisotropy();
 	textureDay.needsUpdate	= true;
 
 	// generate the texture
-	var textureNight		= new THREE.Texture( generateTextureCanvas(true, "#3D3D3B") );
+	var textureNight		= new THREE.Texture( generateTextureCanvas(true, "#3D3D3B",50) );
 	textureNight.anisotropy	= renderer.getMaxAnisotropy();
 	textureNight.needsUpdate	= true;
+
+	var textureNightDeep		= new THREE.Texture( generateTextureCanvas(true, "#3D3D3B",3) );
+	textureNightDeep.anisotropy	= renderer.getMaxAnisotropy();
+	textureNightDeep.needsUpdate	= true;
 
 	// build the mesh
 	var materialDay	= new THREE.MeshLambertMaterial({
@@ -115,12 +127,19 @@ THREEx.ProceduralCity	= function(){
 		emissive: "white"
 	});
 
+	var materialNightDeep	= new THREE.MeshLambertMaterial({
+		map		: textureNightDeep,
+		vertexColors	: THREE.VertexColors,
+		emissive: "white"
+	});
+
 
 	meshDay = new THREE.Mesh(cityGeometry, materialDay );
 	meshNight = new THREE.Mesh(cityGeometry, materialNight );
+	meshNightDeep = new THREE.Mesh(cityGeometry, materialNightDeep );
 	return meshDay
 
-	function generateTextureCanvas(Night, building_color){
+	function generateTextureCanvas(Night, building_color, lights_number){
 		// build a small canvas 32x64 and paint it in white
 		var canvas	= document.createElement( 'canvas' );
 		canvas.width	= 32;
@@ -137,9 +156,27 @@ THREEx.ProceduralCity	= function(){
 				context.fillStyle = 'rgb(' + [value, value, value].join( ',' )  + ')';
 				context.fillRect( x, y, 2, 1 );
 				if(Night){
-					if(x%5 == Math.floor(Math.random()*Math.random()*20)){
-						context.fillStyle	= '#ffffee';
-						context.fillRect( x, y, 2, 1 );
+					if(x%lights_number == Math.floor(Math.random()*Math.random()*20)){
+						light_color = Math.random();
+						if(light_color>0 && light_color<0.2){
+							context.fillStyle	= '#FFFAB2';
+							context.fillRect( x, y, 2, 1 );
+						}else if(light_color>0.2 && light_color<0.4){
+							context.fillStyle	= '#FFEC88';
+							context.fillRect( x, y, 2, 1 );
+						}else if(light_color>0.4 && light_color<0.6){
+							context.fillStyle	= '#FFFCD6';
+							context.fillRect( x, y, 2, 1 );
+						}else if(light_color>0.6 && light_color<0.8){
+							context.fillStyle	= '#FFFC46';
+							context.fillRect( x, y, 2, 1 );
+						}else if(light_color>0.8 && light_color<0.99){
+							context.fillStyle	= '#FFF000';
+							context.fillRect( x, y, 2, 1 );
+						}else{
+							context.fillStyle	= '#FF0000';
+							context.fillRect( x, y, 2, 1 );
+						}
 					}
 				}
 			}
@@ -193,6 +230,10 @@ var lastTimeMsec= null
 			{
 				var f = 1;
 
+				scene.remove(meshNightDeep);
+				scene.remove(meshNight);
+				scene.add(meshDay);
+
 				dirLight.intensity = f;
 				light.intensity = f*0.8;
 				document.body.style.backgroundColor = "hsl("+back_fog_color+", "+back_fog_saturation+"%, "+back_fog_lightness+"%)";
@@ -203,8 +244,19 @@ var lastTimeMsec= null
 
 			 else if (sinus_y_position < 0.4 && sinus_y_position > 0.0 )
 			 {
-				scene.remove(meshNight);
-				scene.add(meshDay);
+				 if(sinus_y_position>0.15){
+					scene.remove(meshNightDeep);
+					scene.remove(meshNight);
+					scene.add(meshDay);
+				 }
+
+				 if(sinus_y_position<0.15){
+					scene.remove(meshNightDeep);
+					scene.add(meshNight);
+					scene.remove(meshDay);
+				 }
+				 
+
 			 	var f = 2.5*sinus_y_position;
 
 			 	dirLight.intensity = f;		
@@ -214,20 +266,21 @@ var lastTimeMsec= null
 				document.body.style.backgroundColor = "hsl("+back_fog_color+", "+back_fog_saturation+"%, "+lightness+"%)";
 				scene.fog.color.setHSL( back_fog_color/360, back_fog_saturation/100, lightness/100);
 
-
-
 				light.color.setHSL( 0.09, 1, 2*sinus_y_position );
 		
 			 }
 
 			else  // night
 			{
-				scene.remove(meshDay);
-				scene.add(meshNight);
-				
+				scene.remove(meshNight)
+				scene.add(meshNightDeep);
 				var f = sinus_y_position;
 				dirLight.intensity = f;
 				light.intensity = f;
+				if(sinus_y_position<-0.70){
+					scene.add(meshNight)
+					scene.remove(meshNightDeep);
+				}
 
 
 			}
